@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SereneSpace | Your Cosmic Sanctuary</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        :root {
+            --space-bg: #05070a;
+            --accent: #a3b18a;
+            --star-gold: #f2cc8f;
+            --nebula-purp: #480ca8;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: var(--space-bg);
+            font-family: 'Segoe UI', sans-serif;
+            color: white;
+        }
+
+        /* --- Interface --- */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 30px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 100;
+            pointer-events: none;
+        }
+        
+        .logo { 
+            font-weight: 200; 
+            letter-spacing: 8px; 
+            opacity: 0.6; 
+            text-transform: uppercase;
+        }
+
+        .controls {
+            position: fixed;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px 30px;
+            border-radius: 50px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        button {
+            background: none;
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 8px 20px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+        }
+
+        button:hover { background: rgba(255,255,255,0.1); }
+        button.active { border-color: var(--star-gold); color: var(--star-gold); }
+
+        .instruction {
+            position: fixed;
+            top: 20%;
+            width: 100%;
+            text-align: center;
+            opacity: 0.4;
+            font-weight: 200;
+            letter-spacing: 3px;
+            pointer-events: none;
+            animation: pulse 4s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo">SereneSpace</div>
+    </nav>
+
+    <div class="instruction">Tap the sky to create stars • Move slowly to drift</div>
+
+    <div class="controls">
+        <button id="rainBtn" onclick="toggleAudio('rain')">Soft Rain</button>
+        <button id="forestBtn" onclick="toggleAudio('forest')">Night Forest</button>
+        <button onclick="clearConstellation()">Reset Sky</button>
+    </div>
+
+    <script>
+        let stars = [];
+        let planets = [];
+        let audioCtx;
+        let nodes = { rain: null, forest: null };
+
+        function setup() {
+            createCanvas(windowWidth, windowHeight);
+            // Initialize background stars
+            for (let i = 0; i < 300; i++) {
+                stars.push(new BackgroundStar());
+            }
+        }
+
+        function draw() {
+            // Space Gradient
+            drawSpaceBackground();
+
+            // Background Stars
+            stars.forEach(s => {
+                s.update();
+                s.display();
+            });
+
+            // User-created Planets (The Zen Garden)
+            planets.forEach(p => {
+                p.update();
+                p.display();
+            });
+
+            // The Forest Silhouette
+            drawForest();
+        }
+
+        function drawSpaceBackground() {
+            let c1 = color(5, 7, 10);
+            let c2 = color(15, 20, 35);
+            for(let y=0; y<height; y++){
+                let n = map(y, 0, height, 0, 1);
+                let newC = lerpColor(c1, c2, n);
+                stroke(newC);
+                line(0, y, width, y);
+            }
+            
+            // Subtle Nebula
+            noStroke();
+            fill(72, 12, 168, 5);
+            ellipse(width/2, height/2, 800 + sin(frameCount*0.01)*50);
+        }
+
+        class BackgroundStar {
+            constructor() {
+                this.pos = createVector(random(width), random(height));
+                this.vel = random(0.05, 0.2);
+                this.size = random(0.5, 2);
+            }
+            update() {
+                let m = createVector(mouseX - width/2, mouseY - height/2);
+                this.pos.add(m.mult(0.0001)); // Parallax drift
+            }
+            display() {
+                fill(255, 255, 255, 150);
+                noStroke();
+                ellipse(this.pos.x, this.pos.y, this.size);
+            }
+        }
+
+        class Planet {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = random(10, 30);
+                this.col = color(random(150, 255), random(200, 255), 255, 180);
+                this.pulse = random(0.01, 0.03);
+            }
+            update() {
+                this.y += sin(frameCount * this.pulse) * 0.2;
+            }
+            display() {
+                // Glow
+                for(let i=3; i>0; i--) {
+                    fill(red(this.col), green(this.col), blue(this.col), 20);
+                    ellipse(this.x, this.y, this.size + (i*15));
+                }
+                fill(this.col);
+                ellipse(this.x, this.y, this.size);
+            }
+        }
+
+        function mousePressed() {
+            if (mouseY < height - 150) { // Only place in sky
+                planets.push(new Planet(mouseX, mouseY));
+            }
+        }
+
+        function drawForest() {
+            fill(2, 8, 5);
+            noStroke();
+            beginShape();
+            vertex(0, height);
+            for (let x = 0; x <= width; x += 30) {
+                let h = noise(x * 0.01) * 120 + 100;
+                vertex(x, height - h);
+            }
+            vertex(width, height);
+            endShape(CLOSE);
+        }
+
+        function clearConstellation() {
+            planets = [];
+        }
+
+        /* --- Audio Engine --- */
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+
+        function toggleAudio(type) {
+            initAudio();
+            const btn = document.getElementById(type + 'Btn');
+            
+            if (nodes[type]) {
+                nodes[type].stop();
+                nodes[type] = null;
+                btn.classList.remove('active');
+            } else {
+                const source = audioCtx.createBufferSource();
+                const buffer = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                
+                for (let i = 0; i < buffer.length; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = type === 'rain' ? 800 : 300;
+
+                const gain = audioCtx.createGain();
+                gain.gain.value = 0.03;
+
+                source.buffer = buffer;
+                source.loop = true;
+                source.connect(filter);
+                filter.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                source.start();
+                nodes[type] = source;
+                btn.classList.add('active');
+            }
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+        }
+    </script>
+</body>
+</html>
